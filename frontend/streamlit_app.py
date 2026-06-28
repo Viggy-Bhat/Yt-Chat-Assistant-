@@ -1,16 +1,18 @@
-"""Streamlit frontend for YouTube Chat.
+"""Streamlit frontend for YouTube Chat — Cinematic Dark Theatre Edition.
 
-Design notes (per frontend-design principles):
-- Distinctive dark aesthetic -- not the default Streamlit look.
-- Custom CSS for typography, message bubbles, sidebar, status pills.
-- Tight visual hierarchy: sidebar (workspaces) -> header (video) -> chat -> input.
-- Generous spacing, high contrast, accent color for primary actions.
+Design notes:
+- Deep black background with warm radial glow (stage lighting effect).
+- Typography: Fraunces (display) + Sora (body) + JetBrains Mono (mono).
+- Gold/amber accent palette for warmth and premium feel.
+- Film grain noise overlay + subtle vignette for theatrical depth.
+- Smooth animations on messages, cards, and status transitions.
 
 Run:  streamlit run frontend/streamlit_app.py
 """
 
 from __future__ import annotations
 
+import html
 import os
 import time
 from datetime import datetime
@@ -98,38 +100,94 @@ def send_message(workspace_id: str, content: str) -> dict[str, Any]:
 
 CUSTOM_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0,200');
 
 :root {
-    --bg-0: #0a0b0f;
-    --bg-1: #11131a;
-    --bg-2: #181b25;
-    --bg-3: #222633;
-    --border: #2a2f3e;
-    --text-0: #f5f6fa;
-    --text-1: #b8bcc8;
-    --text-2: #6f7689;
-    --accent: #7c5cff;
-    --accent-2: #5a8cff;
-    --success: #34d399;
-    --warn: #fbbf24;
-    --danger: #f87171;
-    --shadow: 0 8px 24px rgba(0,0,0,0.4);
+    --bg-0: #0a0a0a;
+    --bg-1: #111111;
+    --bg-2: #1a1a1a;
+    --bg-3: #242424;
+    --bg-4: #2e2e2e;
+    --border: #2a2a2a;
+    --border-light: #3a3a3a;
+    --text-0: #f5efe0;
+    --text-1: #bfb8a8;
+    --text-2: #6b6558;
+    --text-3: #4a453c;
+    --accent: #c9a95c;
+    --accent-2: #d4b96a;
+    --accent-dim: rgba(201, 169, 92, 0.15);
+    --accent-glow: rgba(201, 169, 92, 0.08);
+    --success: #7ac96a;
+    --warn: #d4a54a;
+    --danger: #c96a6a;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 4px 24px rgba(201, 169, 92, 0.12);
+    --radius: 12px;
+    --radius-lg: 16px;
 }
 
-html, body, [class*="css"]  {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+html, body, [class*="css"] {
+    font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fraunces', Georgia, serif !important;
+    letter-spacing: -0.02em;
 }
 
 .stApp {
-    background: linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%) !important;
+    background: var(--bg-0) !important;
     color: var(--text-0);
+}
+
+/* Film grain overlay */
+.stApp::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+}
+
+/* Vignette effect */
+.stApp::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+/* Warm stage glow behind main content */
+.main > .block-container {
+    position: relative;
+}
+.main > .block-container::before {
+    content: '';
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(201, 169, 92, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
     background: var(--bg-1) !important;
     border-right: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
 }
 section[data-testid="stSidebar"] * {
     color: var(--text-0) !important;
@@ -139,7 +197,7 @@ section[data-testid="stSidebar"] * {
 h1, h2, h3 {
     color: var(--text-0) !important;
     font-weight: 600 !important;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
 /* Buttons */
@@ -147,33 +205,127 @@ h1, h2, h3 {
     background: var(--bg-2) !important;
     color: var(--text-0) !important;
     border: 1px solid var(--border) !important;
+    font-family: 'Sora', sans-serif !important;
     border-radius: 10px !important;
     padding: 0.55rem 1rem !important;
     font-weight: 500 !important;
-    transition: all 0.15s ease !important;
+    font-size: 0.85rem !important;
+    transition: all 0.2s ease !important;
 }
 .stButton > button:hover {
     background: var(--bg-3) !important;
     border-color: var(--accent) !important;
+    box-shadow: var(--shadow-glow);
     transform: translateY(-1px);
 }
 .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%) !important;
     border: none !important;
-    color: white !important;
+    color: #0a0a0a !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em;
+}
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 4px 20px rgba(201, 169, 92, 0.3) !important;
+    transform: translateY(-2px);
 }
 
-/* Input */
+/* Input fields */
 .stTextInput input, .stChatInput textarea, .stChatInput input {
     background: var(--bg-2) !important;
     color: var(--text-0) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 12px !important;
-    font-size: 0.95rem !important;
+    border-radius: var(--radius) !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.9rem !important;
+    caret-color: var(--accent);
 }
 .stTextInput input:focus, .stChatInput textarea:focus {
     border-color: var(--accent) !important;
-    box-shadow: 0 0 0 3px rgba(124,92,255,0.15) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim) !important;
+}
+.stTextInput input::placeholder, .stChatInput textarea::placeholder {
+    color: var(--text-3) !important;
+}
+
+/* Custom chat bubbles */
+.chat-bubble {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 0.35rem 0;
+    animation: fadeSlideIn 0.3s ease-out;
+}
+.chat-avatar {
+    font-size: 1.3rem;
+    background: var(--bg-2);
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    line-height: 1;
+}
+.chat-content {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0.85rem 1.1rem;
+    color: var(--text-0);
+    font-size: 0.9rem;
+    line-height: 1.65;
+    flex: 1;
+    min-width: 0;
+}
+.chat-bubble-user .chat-avatar {
+    order: 1;
+}
+.chat-bubble-user .chat-content {
+    background: linear-gradient(135deg, var(--bg-3), var(--bg-2));
+    border-color: var(--accent);
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble-assistant .chat-content {
+    border-left: 2px solid var(--accent);
+    border-bottom-left-radius: 4px;
+}
+
+/* Thinking indicator — animated gold bouncing dots */
+.thinking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.85rem 1.1rem;
+    margin: 0.35rem 0 0.35rem 44px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
+    border-radius: var(--radius-lg);
+    border-bottom-left-radius: 4px;
+    min-height: 36px;
+    animation: fadeSlideIn 0.2s ease-out;
+}
+.thinking-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: thinkBounce 1.4s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes thinkBounce {
+    0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-6px); }
+}
+
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Hide default decorations */
@@ -181,24 +333,58 @@ h1, h2, h3 {
     visibility: hidden;
 }
 
-/* Custom components */
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Workspace cards */
 .ws-card {
     padding: 0.85rem 0.95rem;
-    margin: 0.4rem 0;
+    margin: 0.5rem 0;
     background: var(--bg-2);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--radius);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.ws-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+    border-radius: 0 3px 3px 0;
+    transition: background 0.2s ease;
 }
 .ws-card:hover {
     background: var(--bg-3);
     border-color: var(--accent);
-    transform: translateX(2px);
+    transform: translateX(3px);
+    box-shadow: var(--shadow-glow);
 }
 .ws-card.active {
-    background: linear-gradient(135deg, rgba(124,92,255,0.15), rgba(90,140,255,0.08));
+    background: linear-gradient(135deg, var(--accent-dim), transparent 80%);
     border-color: var(--accent);
+    box-shadow: var(--shadow-glow);
+}
+.ws-card.active::before {
+    background: var(--accent);
 }
 .ws-card .title {
     font-size: 0.88rem;
@@ -214,42 +400,57 @@ h1, h2, h3 {
 .ws-card .meta {
     font-size: 0.72rem;
     color: var(--text-2);
-    margin-top: 0.2rem;
+    margin-top: 0.25rem;
 }
 
+/* Status pills */
 .status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.2rem 0.65rem;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
     border-radius: 999px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+    position: relative;
 }
-.status-pending  { background: rgba(251,191,36,0.12); color: var(--warn); }
-.status-ingesting{ background: rgba(124,92,255,0.15); color: var(--accent); }
-.status-ready    { background: rgba(52,211,153,0.12); color: var(--success); }
-.status-failed   { background: rgba(248,113,113,0.12); color: var(--danger); }
+.status-pending  { background: rgba(212, 165, 74, 0.12); color: var(--warn); border: 1px solid rgba(212, 165, 74, 0.2); }
+.status-ingesting { background: rgba(201, 169, 92, 0.12); color: var(--accent); border: 1px solid rgba(201, 169, 92, 0.2); }
+.status-ready    { background: rgba(122, 201, 106, 0.12); color: var(--success); border: 1px solid rgba(122, 201, 106, 0.2); }
+.status-failed   { background: rgba(201, 106, 106, 0.12); color: var(--danger); border: 1px solid rgba(201, 106, 106, 0.2); }
 .status-pill::before {
     content: '';
-    width: 6px; height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: currentColor;
 }
-.status-ingesting::before { animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.status-ingesting::before {
+    animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.6); }
+}
 
+/* Video header */
 .video-header {
     display: flex;
     gap: 1rem;
     padding: 1rem 1.25rem;
     background: var(--bg-2);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    margin-bottom: 1.25rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.5rem;
     align-items: center;
+    position: relative;
+    z-index: 1;
+    transition: border-color 0.2s ease;
+}
+.video-header:hover {
+    border-color: var(--border-light);
 }
 .video-header img {
     width: 120px;
@@ -257,12 +458,15 @@ h1, h2, h3 {
     object-fit: cover;
     border-radius: 8px;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 .video-header .vtitle {
-    font-size: 1.05rem;
+    font-family: 'Fraunces', Georgia, serif !important;
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-0);
     margin: 0 0 0.2rem 0;
+    line-height: 1.3;
 }
 .video-header .vchannel {
     font-size: 0.82rem;
@@ -270,70 +474,153 @@ h1, h2, h3 {
     margin: 0;
 }
 
+/* Empty state */
 .empty-hero {
     text-align: center;
-    padding: 5rem 2rem 3rem;
+    padding: 6rem 2rem 3rem;
+    position: relative;
+    z-index: 1;
 }
 .empty-hero h1 {
-    font-size: 2.4rem !important;
+    font-family: 'Fraunces', Georgia, serif !important;
+    font-size: 2.8rem !important;
     font-weight: 700 !important;
-    background: linear-gradient(135deg, #fff 0%, var(--accent-2) 60%, var(--accent) 100%);
+    background: linear-gradient(135deg, #f5efe0 0%, var(--accent-2) 50%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.15;
 }
 .empty-hero p {
     color: var(--text-1);
     font-size: 1.05rem;
-    max-width: 520px;
+    max-width: 480px;
     margin: 0 auto;
+    line-height: 1.6;
 }
 
+/* Source cards (inside expander) */
 .source-card {
     background: var(--bg-3);
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
     border-radius: 8px;
-    padding: 0.65rem 0.85rem;
-    margin: 0.4rem 0;
-    font-size: 0.85rem;
+    padding: 0.7rem 0.9rem;
+    margin: 0.5rem 0;
+    font-size: 0.82rem;
     color: var(--text-1);
-    line-height: 1.5;
+    line-height: 1.55;
+    transition: all 0.15s ease;
+}
+.source-card:hover {
+    border-color: var(--border-light);
+    background: var(--bg-4);
 }
 .source-card .ts {
     font-family: 'JetBrains Mono', monospace;
     color: var(--accent);
-    font-weight: 600;
-    font-size: 0.78rem;
-    margin-right: 0.4rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    display: inline-block;
+    min-width: 3.5em;
+}
+.source-card .source-score {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-2);
+    float: right;
 }
 
+/* Expander override */
+.streamlit-expanderHeader {
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.82rem !important;
+    color: var(--text-1) !important;
+    background: var(--bg-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    padding: 0.4rem 0.8rem !important;
+    margin: 0.25rem 0 !important;
+}
+.streamlit-expanderHeader:hover {
+    border-color: var(--accent) !important;
+}
+.streamlit-expanderContent {
+    border: none !important;
+    background: transparent !important;
+    padding: 0.25rem 0 0 0.5rem !important;
+}
+
+/* Brand */
 .brand {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.65rem;
     padding: 0.5rem 0 1.25rem;
+}
+.brand-text {
+    font-family: 'Fraunces', Georgia, serif !important;
     font-weight: 700;
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     color: var(--text-0);
+    letter-spacing: -0.03em;
 }
 .brand-mark {
-    width: 32px; height: 32px;
+    width: 34px;
+    height: 34px;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 1rem;
-}
-.subtle { color: var(--text-2); font-size: 0.78rem; }
-.error-box {
-    background: rgba(248,113,113,0.1);
-    border: 1px solid rgba(248,113,113,0.3);
-    color: var(--danger);
-    padding: 0.75rem 1rem;
     border-radius: 10px;
-    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0a0a0a;
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-family: 'Fraunces', serif;
+    box-shadow: 0 2px 12px rgba(201, 169, 92, 0.25);
+    animation: glowPulse 3s ease-in-out infinite;
+    flex-shrink: 0;
+}
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 2px 12px rgba(201, 169, 92, 0.25); }
+    50% { box-shadow: 0 2px 20px rgba(201, 169, 92, 0.4); }
+}
+
+.subtle {
+    color: var(--text-2);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+/* Error box */
+.error-box {
+    background: rgba(201, 106, 106, 0.08);
+    border: 1px solid rgba(201, 106, 106, 0.25);
+    color: var(--danger);
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
     margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+/* Indexing info box override */
+.stAlert {
+    background: var(--accent-dim) !important;
+    color: var(--accent) !important;
+    border: 1px solid rgba(201, 169, 92, 0.2) !important;
+    border-radius: var(--radius) !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.9rem !important;
+    backdrop-filter: blur(8px);
+}
+
+/* Separator */
+hr {
+    border-color: var(--border) !important;
+    margin: 1rem 0 !important;
 }
 </style>
 """
@@ -393,12 +680,14 @@ def render_video_header(ws: dict[str, Any]) -> None:
 def render_sources(sources: list[dict[str, Any]]) -> None:
     if not sources:
         return
-    with st.expander(f"Sources ({len(sources)})", expanded=False):
+    with st.expander(f"📎 Sources ({len(sources)})", expanded=False):
         for s in sources:
             ts = format_timestamp(s.get("start", 0))
             text = (s.get("text") or "").strip()
+            score = s.get("score")
+            score_html = f' <span class="source-score">{score:.3f}</span>' if score is not None else ""
             st.markdown(
-                f'<div class="source-card"><span class="ts">{ts}</span>{text}</div>',
+                f'<div class="source-card"><span class="ts">{ts}</span>{text}{score_html}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -456,7 +745,7 @@ def refresh_active_workspace() -> None:
 def render_sidebar() -> None:
     with st.sidebar:
         st.markdown(
-            '<div class="brand"><div class="brand-mark">▶</div><div>YT Chat</div></div>',
+            '<div class="brand"><div class="brand-mark">⌂</div><div class="brand-text">YT Chat</div></div>',
             unsafe_allow_html=True,
         )
 
@@ -491,8 +780,8 @@ def render_sidebar() -> None:
             on_click=lambda: st.session_state.update(last_loaded_for=None),
         )
 
-        st.markdown("---")
-        st.markdown("**Your workspaces**")
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin: 0.5rem 0 0.25rem 0; font-family: Fraunces, serif !important;'>Workspaces</h4>", unsafe_allow_html=True)
 
         try:
             workspaces = list_workspaces()
@@ -594,10 +883,19 @@ def render_chat_view() -> None:
 
     # Ready: show messages
     for m in st.session_state.messages:
-        with st.chat_message(m["role"], avatar="🧑" if m["role"] == "user" else "🤖"):
-            st.markdown(m["content"])
-            if m["role"] == "assistant":
-                render_sources(m.get("sources") or [])
+        role = m["role"]
+        avatar = "🧑" if role == "user" else "🤖"
+        bubble_class = "chat-bubble-user" if role == "user" else "chat-bubble-assistant"
+        safe_content = html.escape(m["content"])
+        st.markdown(
+            f'<div class="chat-bubble {bubble_class}">'
+            f'<span class="chat-avatar">{avatar}</span>'
+            f'<div class="chat-content">{safe_content}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if role == "assistant":
+            render_sources(m.get("sources") or [])
 
     # Chat input
     prompt = st.chat_input("Ask anything about this video...")
@@ -607,19 +905,27 @@ def render_chat_view() -> None:
 
 def send_and_render(prompt: str) -> None:
     wid = st.session_state.active_workspace_id
-    # Optimistic user message
-    st.session_state.messages.append(
-        {"id": "tmp", "role": "user", "content": prompt, "sources": [], "created_at": datetime.utcnow().isoformat()}
+
+    # Render animated thinking indicator before the blocking API call.
+    # This element renders immediately while the request is in flight.
+    st.markdown(
+        '<div class="thinking-indicator">'
+        '<span class="thinking-dot"></span>'
+        '<span class="thinking-dot"></span>'
+        '<span class="thinking-dot"></span>'
+        '</div>',
+        unsafe_allow_html=True,
     )
+
     try:
         result = send_message(wid, prompt)
     except APIError as e:
-        st.session_state.messages.pop()  # remove optimistic
         st.session_state.error = str(e)
         st.rerun()
         return
-    # Replace optimistic user msg + append assistant
-    st.session_state.messages = [result["user_message"], result["assistant_message"]]
+
+    st.session_state.messages.append(result["user_message"])
+    st.session_state.messages.append(result["assistant_message"])
     st.session_state.error = None
     st.rerun()
 
