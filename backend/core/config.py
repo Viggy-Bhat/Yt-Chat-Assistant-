@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -47,6 +48,11 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    # ---- LangSmith Tracing ----
+    langsmith_api_key: str | None = None
+    langsmith_tracing: bool = False
+    langsmith_project: str = "yt-chat-eval"
+
     # ---- Ingestion / RAG ----
     chunk_size: int = Field(default=800, ge=100, le=4000)
     chunk_overlap: int = Field(default=200, ge=0, le=1000)
@@ -72,4 +78,11 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Cached settings accessor."""
-    return Settings()  # type: ignore[call-arg]
+    settings = Settings()  # type: ignore[call-arg]
+    # Push LangSmith env vars into os.environ so LangChain auto-instrumentation
+    # picks them up (pydantic-settings does NOT set real OS env vars).
+    if settings.langsmith_api_key:
+        os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
+        os.environ["LANGSMITH_TRACING"] = "true" if settings.langsmith_tracing else "false"
+        os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project.strip()
+    return settings

@@ -314,6 +314,73 @@ The autouse `temp_env` fixture in `conftest.py` gives every test a throwaway SQL
 
 ---
 
+## Evaluation (LangSmith)
+
+The project includes automated, reference-free evaluation using LangSmith. The evaluation pipeline generates questions from real transcript chunks, runs the actual RAG chain against them, and scores the outputs without requiring hand-written ground-truth answers.
+
+### Prerequisites
+
+Set `LANGSMITH_API_KEY` in your `.env` file (or export as an environment variable). The key is available from [smith.langchain.com](https://smith.langchain.com).
+
+### Step 1 — Generate a dataset (one-time per video)
+
+```bash
+python -m evals.generate_dataset --workspace-id <workspace-uuid>
+```
+
+This loads the Chroma chunks for an already-ingested workspace, uses Groq to write one question per chunk (sampled evenly across the video), and uploads the question/range pairs to a LangSmith dataset named `yt-chat-eval-{workspace_id}`. It also adds a small number of negative (off-topic) examples.
+
+Options:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--workspace-id` | _required_ | UUID of an ingested workspace |
+| `--max-examples` | 20 | Max positive examples (sampled evenly) |
+| `--max-negative` | 5 | Number of negative/off-topic examples |
+
+After generation, quickly skim the auto-generated questions in the LangSmith UI dataset view (~2–3 min) to sanity-check none are nonsensical before trusting eval scores.
+
+### Step 2 — Run an evaluation experiment (repeatable)
+
+```bash
+python -m evals.run_eval --workspace-id <workspace-uuid> --experiment-name "baseline-chunk800"
+```
+
+This loads the dataset, runs the real RAG chain (`backend/services/rag.py`'s `build_chain` + `VectorStoreService`) against each question, and applies two reference-free evaluators:
+
+| Evaluator | What it measures | Method |
+|---|---|---|
+| `faithfulness` | Is the answer grounded in the retrieved sources? | LLM-as-judge (YES/NO). For negative examples, checks correct refusal. |
+| `retrieval_recall` | Did retrieval find a chunk overlapping the expected timestamp? | Compares `[start, end]` of retrieved chunks vs. the expected range. |
+
+Results are uploaded to LangSmith under the project configured in `LANGSMITH_PROJECT` (default: `yt-chat-eval`). A summary is also printed to stdout.
+
+Options:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--workspace-id` | _required_ | UUID of the ingested workspace |
+| `--experiment-name` | `eval-{timestamp}` | Label for this experiment |
+
+### Suggested workflow
+
+1. Ingest a test video (paste a YouTube URL in the frontend).
+2. Generate a dataset: `python -m evals.generate_dataset --workspace-id <id>`
+3. Run a baseline eval: `python -m evals.run_eval --workspace-id <id> --experiment-name "baseline"`
+4. Change one variable (chunk size, `RETRIEVAL_TOP_K`, system prompt wording, etc.).
+5. Re-run eval with a new experiment name: `python -m evals.run_eval --workspace-id <id> --experiment-name "chunk-1200"`
+6. Compare both experiments side-by-side in the LangSmith UI.
+
+### Design notes
+
+- The dataset is generated from the same Chroma chunks the RAG pipeline uses at inference time — no separate gold corpus to maintain.
+- `expected_timestamp_range` comes from each chunk's `[start, end]` metadata, so ground truth is free and always in sync with the actual transcript.
+- Reference-free evaluators mean you never write a "correct answer" by hand.
+- Generation and evaluation are separate steps so the same dataset can be reused across many experiments when comparing chunk size, `top_k`, or prompt changes.
+- The eval tests the *real* production chain (`build_chain` + `VectorStoreService`), not a reimplementation — if something changes in the app, eval moves with it.
+
+---
+
 ## License
 
 MIT
